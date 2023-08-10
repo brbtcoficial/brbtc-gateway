@@ -24,7 +24,7 @@ function brbtc_init_gateway_class(){
             $this->id = 'brbtc_gateway';
             $this->icon = plugins_url( 'https://brasilbitcoin.com.br/images/logo/logo2.png', __FILE__ );
             $this->has_fields = false;
-            $this->method_title = 'BRBTC Gateway';
+            $this->method_title = 'Brasil Bitcoin Pay';
             $this->method_description = 'BRBTC Payment Gateway for WooCommerce';
 
             $this->supports = [
@@ -56,48 +56,40 @@ function brbtc_init_gateway_class(){
         public function init_form_fields() {
             $this->form_fields = array(
                 'enabled' => array(
-                    'title'       => 'Enable/Disable',
-                    'label'       => 'Enable Misha Gateway',
+                    'title'       => 'Ativar/Desativar',
+                    'label'       => 'Ativar Gateway de Pagamento',
                     'type'        => 'checkbox',
                     'description' => '',
-                    'default'     => 'no'
+                    'default'     => 'yes'
                 ),
                 'title' => array(
-                    'title'       => 'Title',
+                    'title'       => 'Título',
                     'type'        => 'text',
-                    'description' => 'This controls the title which the user sees during checkout.',
-                    'default'     => 'Credit Card',
+                    'description' => 'Escolha o título que irá aparecer para essa opção de pagamento.',
+                    'default'     => 'Criptomoedas',
                     'desc_tip'    => true,
                 ),
                 'description' => array(
-                    'title'       => 'Description',
+                    'title'       => 'Descrição',
                     'type'        => 'textarea',
-                    'description' => 'This controls the description which the user sees during checkout.',
-                    'default'     => 'Pay with your credit card via our super-cool payment gateway.',
+                    'description' => 'Define a descrição que irá aparecer para o usuário, nessa opção de pagamento.',
+                    'default'     => 'Pague utilizando as principais criptomoedas do mercado.',
                 ),
                 'testmode' => array(
-                    'title'       => 'Test mode',
-                    'label'       => 'Enable Test Mode',
+                    'title'       => 'Sandbox',
+                    'label'       => 'Ativar modo sandbox',
                     'type'        => 'checkbox',
-                    'description' => 'Place the payment gateway in test mode using test API keys.',
-                    'default'     => 'yes',
+                    'description' => 'Utiliza o ambiente de testes do gateway de pagamento.',
+                    'default'     => 'no',
                     'desc_tip'    => true,
                 ),
                 'test_publishable_key' => array(
-                    'title'       => 'Test Publishable Key',
+                    'title'       => 'API Key de Teste',
                     'type'        => 'text'
                 ),
                 'test_private_key' => array(
-                    'title'       => 'Test Private Key',
+                    'title'       => 'API Key de produção',
                     'type'        => 'password',
-                ),
-                'publishable_key' => array(
-                    'title'       => 'Live Publishable Key',
-                    'type'        => 'text'
-                ),
-                'private_key' => array(
-                    'title'       => 'Live Private Key',
-                    'type'        => 'password'
                 )
             );
         }
