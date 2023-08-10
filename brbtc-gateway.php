@@ -17,6 +17,13 @@ function brbtc_gateway_class( $gateways ) {
     return $gateways;
 }
 
+add_shortcode( 'brbtc_gateway_iframe', 'get_iframe' );
+function get_iframe(){
+    if(isset($_GET['brbtcUrl']) && $_GET['brbtcUrl']){
+        echo "<iframe src='https://brasilbitcoin.com.br".$_GET['brbtcUrl']."' width='100%' height='100%' style='min-height:35rem' frameborder='0' scrolling='no'></iframe>";
+    }
+}
+
 add_action( 'plugins_loaded', 'brbtc_init_gateway_class' );
 function brbtc_init_gateway_class(){
     class WC_BRBTC_Gateway extends WC_Payment_Gateway {
@@ -40,17 +47,15 @@ function brbtc_init_gateway_class(){
             $this->enabled = $this->get_option( 'enabled' );
             $this->icon = $this->get_option( 'icon' ) === 'yes' ? 'https://brasilbitcoin.com.br/images/logo/logo_s.png' : null;
             $this->testmode = 'yes' === $this->get_option( 'testmode' );
-            $this->private_key = $this->testmode ? $this->get_option( 'test_private_key' ) : $this->get_option( 'private_key' );
-            $this->publishable_key = $this->testmode ? $this->get_option( 'test_publishable_key' ) : $this->get_option( 'publishable_key' );
+            $this->merchant_id = $this->testmode ? $this->get_option( 'test_private_key' ) : $this->get_option( 'private_key' );
+            $this->receiveType = $this->get_option( 'receiveType' );
+            $this->convert = $this->get_option( 'convert' );
 
             // Saves the settings
             add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
 
-            // custom javascript
-            add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ) );
-
             // call webhook
-            add_action( 'woocommerce_api_{webhook name}', array( $this, 'webhook' ) );
+            add_action( 'woocommerce_api_brbtc_gateway', array( $this, 'webhook' ) );
         }
 
         public function init_form_fields() {
@@ -84,42 +89,59 @@ function brbtc_init_gateway_class(){
                 ),
                 'testmode' => array(
                     'title'       => 'Sandbox',
-                    'label'       => 'Ativar sandbox',
+                    'label'       => 'Ativar modo sandbox',
                     'type'        => 'checkbox',
                     'description' => 'Utiliza o ambiente de testes do gateway de pagamento.',
                     'default'     => 'no',
                     'desc_tip'    => true,
                 ),
-                'test_publishable_key' => array(
-                    'title'       => 'API Key de Teste',
-                    'type'        => 'text'
+                'receiveType' => array(
+                    'title'       => 'Preços em',
+                    'description' => 'Seus preços estão em Real ou Cripto?',
+                    'type'        => 'select',
+                    'options' => [
+                        'real' => 'Real',
+                        'cripto' => 'Cripto',
+                    ],
+                    'desc_tip'    => true,
+                    'default'     => 'real',
                 ),
-                'test_private_key' => array(
-                    'title'       => 'API Key de produção',
-                    'type'        => 'password',
+                'convert' => array(
+                    'title'       => 'Converter',
+                    'type'        => 'checkbox',
+                    'description' => 'Deseja converter o valor do pedido para Real automaticamente?',
+                    'default'     => 'yes',
+                    'desc_tip'    => true,
+                ),
+                'merchant_id' => array(
+                    'title'       => 'Merchant ID',
+                    'type'        => 'text'
                 )
             );
         }
 
-        public function payment_fields(){
-            if ( $this->description ) {
-                // you can instructions for test mode, I mean test card numbers etc.
-                if ( $this->testmode ) {
-                    $this->description .= "\nSANDBOX: Você está testando o gateway de pagamento.";
-                    $this->description  = trim( $this->description );
-                }
-                // display the description with <p> tags etc.
-                echo wpautop( wp_kses_post( $this->description ) );
+        public function process_payment( $order_id ){
+            global $woocommerce;
+
+            $order = wc_get_order( $order_id );
+            $merchant_id = $this->get_option( 'merchant_id' ) ?? null;
+            if(!$merchant_id) {
+                wc_add_notice(  'Essa loja ainda não está credenciada.', 'error' );
+                return;
             }
+
+            $value = $order->get_total();
+            $type = $this->get_option( 'receiveType' ) ?? null;
+            $sandbox = $this->get_option( 'testmode' ) ? 'true' : 'false';
+            $convert = $this->get_option( 'convert' ) ? '1' : '0';
+
+            $url = $merchant_id ? rawurlencode("/newPayment/$type/$merchant_id/$order_id/$value/BTC/$convert?sandbox=$sandbox") : false;
+
+            return array(
+				'result' => 'success',
+				'redirect' => $this->get_return_url( $order )."&brbtcUrl=$url"
+			);
         }
-
-        public function payment_scripts(){}
-
-        public function validate_fields(){
-            return true;
-        }
-
-        public function process_payment( $order_id ){}
 
         public function webhook(){}
     }
