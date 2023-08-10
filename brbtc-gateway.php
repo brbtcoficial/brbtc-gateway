@@ -22,7 +22,7 @@ function brbtc_init_gateway_class(){
     class WC_BRBTC_Gateway extends WC_Payment_Gateway {
         public function __construct(){
             $this->id = 'brbtc_gateway';
-            $this->icon = plugins_url( 'https://brasilbitcoin.com.br/images/logo/logo2.png', __FILE__ );
+            $this->icon = 'https://brasilbitcoin.com.br/images/logo/logo_s.png';
             $this->has_fields = false;
             $this->method_title = 'Brasil Bitcoin Pay';
             $this->method_description = 'O plugin oficial da Brasil Bitcoi Pay para WooCommerce. Aceite pagamentos em Bitcoin, Litecoin, Ethereum e outras criptomoedas.';
