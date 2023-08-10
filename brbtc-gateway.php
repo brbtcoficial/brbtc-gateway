@@ -21,7 +21,7 @@ function brbtc_gateway_class( $gateways ) {
 add_shortcode( 'brbtc_gateway_iframe', 'get_iframe' );
 function get_iframe(){
     if(isset($_GET['brbtcUrl']) && $_GET['brbtcUrl']){
-        echo "<iframe src='https://brasilbitcoin.com.br".$_GET['brbtcUrl']."' width='100%' height='100%' style='min-height:35rem' frameborder='0' scrolling='no'></iframe>";
+        echo "<iframe src='https://brasilbitcoin.com.br".$_GET['brbtcUrl']."' width='100%' height='100%' style='min-height:35rem' frameborder='0'></iframe>";
     }
 }
 
@@ -67,13 +67,16 @@ function brbtc_init_gateway_class(){
             add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, [$this, 'process_admin_options'] );
 
             // call webhook
-            add_action( 'woocommerce_api_'.$this->webhook, [ $this, 'webhook' ] );
+            // add_action( 'woocommerce_api_'.strtolower($this->webhook), [ $this, 'webhook' ] );
+            add_action( 'rest_api_init', [$this, 'custom_rest_api_init']);
         }
 
-        function brbtc_gateway_add_admin_menu(  ) { 
-
-            add_options_page( 'Brasil Bitcoin Pay', 'Brasil Bitcoin Pay', 'manage_options', 'brasil_bitcoin_pay', 'brbtc_gateway_options_page' );
-
+        public function custom_rest_api_init(){
+            $webhook = $this->get_option('webhook');
+            register_rest_route( strtolower($webhook), '/', [
+                'methods' => 'POST',
+                'callback' => [ $this, 'webhook' ]
+            ] );
         }
 
         public function init_form_fields() {
@@ -103,14 +106,14 @@ function brbtc_init_gateway_class(){
                     'description' => "O webhook será $domain/wc-api/$webhookPath",
                     'default' => 'brbtc_gateway'
                 ],
-                'testmode' => array(
+                'testmode' => [
                     'title'       => 'Sandbox',
                     'label'       => 'Ativar modo sandbox',
                     'type'        => 'checkbox',
                     'description' => 'Utiliza o ambiente de testes do gateway de pagamento.',
                     'default'     => 'no',
                     'desc_tip'    => true,
-                ),
+                ],
                 [
                     'title' => 'Configurações de exibição',
                     'type' => 'title',
@@ -257,7 +260,9 @@ function brbtc_init_gateway_class(){
             $button_text_color = str_replace('#', '', $this->get_option( 'button_text_color' ));
             $button_color = str_replace('#', '', $this->get_option( 'button_color' ));
 
-            $url = $merchant_id ? rawurlencode("/newPayment/$type/$merchant_id/$order_id/$value/$coin/$convert?sandbox=$sandbox&codeSize=$code_size&textColor=$text_color&bgColor=$bg_color&selectorTextColor=$selector_text_color&selectorColor=$selector_color&buttonTextColor=$button_text_color&button_color=$button_color") : false;
+            $url = $merchant_id ? rawurlencode("/newPayment/$type/$merchant_id/$order_id/$value/$coin/$convert?sandbox=$sandbox&codeSize=$code_size&textColor=$text_color&bgColor=$bg_color&selectorTextColor=$selector_text_color&selectorColor=$selector_color&buttonTextColor=$button_text_color&buttonColor=$button_color") : false;
+            
+            $woocommerce->cart->empty_cart();
 
             return array(
 				'result' => 'success',
@@ -265,20 +270,22 @@ function brbtc_init_gateway_class(){
 			);
         }
 
-        public function webhook(){
-            if(!isset($_POST['checkout_id']) || !isset($_POST['is_paid']) || !isset($_POST['status'])) return;
+        public function webhook($request){
+            $data = $request->get_params();
+
+            if(!isset($data['checkout_id']) || !isset($data['is_paid']) || !isset($data['status'])) return;
             
-            $order = wc_get_order( $_POST['checkout_id'] );
+            $order = wc_get_order( $data['checkout_id'] );
             if(!$order) return;
 
-            $isPaid = $_POST['is_paid'];
-            $status = $_POST['status'];
+            $isPaid = $data['is_paid'];
+            $status = $data['status'];
 
-            if($status === 'credited' && $isPaid){
-                $value = number_format(($_POST['value_brl'] ?? 0), 2, ',', '.');
-                $cripto = number_format(($_POST['value_cripto'] ?? 0), 8, '.', '');
-                $price = number_format(($_POST['price_cripto'] ?? 0), 2, ',', '.');
-                $coin_tag = $_POST['coin_tag'] ?? '';
+            if($status === 'credited'){
+                $value = number_format(($data['value_brl'] ?? 0), 2, ',', '.');
+                $cripto = number_format(($data['value_cripto'] ?? 0), 8, '.', '');
+                $price = number_format(($data['price_cripto'] ?? 0), 2, ',', '.');
+                $coin_tag = $data['coin_tag'] ?? '';
 
                 $order->payment_complete();
                 $order->reduce_order_stock();
@@ -286,9 +293,12 @@ function brbtc_init_gateway_class(){
                 $order->add_order_note("Seu pedido foi pago com sucesso!\n\nValor pago: R$ $value\nCripto: $cripto $coin_tag\nPreço unitário: R$ $price");
             }
             elseif($status === 'pending' && $isPaid){
-                $order->update_status('on-hold', 'Aguardando confirmação');
+                $order->update_status('on-hold');
                 $order->add_order_note("Seu pedido está aguardando a confirmação do pagamento pela rede da criptomoeda utilizada.");
             }
+
+            $debug = json_encode($data);
+            rest_ensure_response($debug);
         }
     }
 }
