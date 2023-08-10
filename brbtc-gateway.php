@@ -84,7 +84,7 @@ function brbtc_init_gateway_class(){
                 ),
                 'testmode' => array(
                     'title'       => 'Sandbox',
-                    'label'       => 'Ativar modo sandbox',
+                    'label'       => 'Ativar sandbox',
                     'type'        => 'checkbox',
                     'description' => 'Utiliza o ambiente de testes do gateway de pagamento.',
                     'default'     => 'no',
