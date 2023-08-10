@@ -38,7 +38,7 @@ function brbtc_init_gateway_class(){
             $this->title = $this->get_option( 'title' );
             $this->description = $this->get_option( 'description' );
             $this->enabled = $this->get_option( 'enabled' );
-            $this->icon = $this->get_option( 'icon' ) ? 'https://brasilbitcoin.com.br/images/logo/logo_s.png' : null;
+            $this->icon = $this->get_option( 'icon' ) === 'yes' ? 'https://brasilbitcoin.com.br/images/logo/logo_s.png' : null;
             $this->testmode = 'yes' === $this->get_option( 'testmode' );
             $this->private_key = $this->testmode ? $this->get_option( 'test_private_key' ) : $this->get_option( 'private_key' );
             $this->publishable_key = $this->testmode ? $this->get_option( 'test_publishable_key' ) : $this->get_option( 'publishable_key' );
