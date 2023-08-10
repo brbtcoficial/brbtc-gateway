@@ -1,4 +1,4 @@
-# brbtc-gateway
+# Plugin Brasil Bitcoin Pay para WooCommerce
 ## Introdução
 Este é o plugin de implementação do Gateway de Pagamentos Brasil Bitcoin Pay. É necessário entrar em contato com um consultor para solicitar o serviço.
 
