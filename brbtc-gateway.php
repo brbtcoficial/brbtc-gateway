@@ -101,7 +101,17 @@ function brbtc_init_gateway_class(){
             );
         }
 
-        public function payment_fields(){}
+        public function payment_fields(){
+            if ( $this->description ) {
+                // you can instructions for test mode, I mean test card numbers etc.
+                if ( $this->testmode ) {
+                    $this->description .= "\nSANDBOX: Você está testando o gateway de pagamento.";
+                    $this->description  = trim( $this->description );
+                }
+                // display the description with <p> tags etc.
+                echo wpautop( wp_kses_post( $this->description ) );
+            }
+        }
 
         public function payment_scripts(){}
 
