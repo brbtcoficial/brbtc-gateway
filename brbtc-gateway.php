@@ -62,6 +62,13 @@ function brbtc_init_gateway_class(){
                     'description' => '',
                     'default'     => 'yes'
                 ),
+                'icon' => array(
+                    'title'       => 'Ícone',
+                    'label'       => 'Mostrar ícone',
+                    'type'        => 'checkbox',
+                    'description' => 'Escolha se quer que o logo da Brasil Bitcoin seja ou nào mostrado para o usuário.',
+                    'default'     => 'yes'
+                ),
                 'title' => array(
                     'title'       => 'Título',
                     'type'        => 'text',
