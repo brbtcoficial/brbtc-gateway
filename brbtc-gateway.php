@@ -17,6 +17,7 @@ function brbtc_gateway_class( $gateways ) {
     return $gateways;
 }
 
+// shortcode to get iframe
 add_shortcode( 'brbtc_gateway_iframe', 'get_iframe' );
 function get_iframe(){
     if(isset($_GET['brbtcUrl']) && $_GET['brbtcUrl']){
@@ -31,7 +32,7 @@ function brbtc_init_gateway_class(){
             $this->id = 'brbtc_gateway';
             $this->has_fields = false;
             $this->method_title = 'Brasil Bitcoin Pay';
-            $this->method_description = 'O plugin oficial da Brasil Bitcoi Pay para WooCommerce. Aceite pagamentos em Bitcoin, Litecoin, Ethereum e outras criptomoedas.';
+            $this->method_description = 'O plugin para Brasil Bitcoin Pay com WooCommerce. Aceite pagamentos em Bitcoin, Litecoin, Ethereum e outras criptomoedas.';
 
             $this->supports = [
                 'products'
@@ -40,7 +41,7 @@ function brbtc_init_gateway_class(){
             // Load form fields.
             $this->init_form_fields();
 
-            // Load the settings.
+            // Load the settings. 
             $this->init_settings();
             $this->title = $this->get_option( 'title' );
             $this->description = $this->get_option( 'description' );
@@ -50,29 +51,78 @@ function brbtc_init_gateway_class(){
             $this->merchant_id = $this->testmode ? $this->get_option( 'test_private_key' ) : $this->get_option( 'private_key' );
             $this->receiveType = $this->get_option( 'receiveType' );
             $this->convert = $this->get_option( 'convert' );
+            $this->webhook = $this->get_option( 'webhook' );
+            $this->coin = $this->get_option( 'coin' );
+
+            // styles options
+            $this->code_size = $this->get_option( 'code_size' );
+            $this->text_color = $this->get_option( 'text_color' );
+            $this->bg_color = $this->get_option( 'bg_color' );
+            $this->selector_text_color = $this->get_option( 'selector_text_color' );
+            $this->selector_color = $this->get_option( 'selector_color' );
+            $this->button_text_color = $this->get_option( 'button_text_color' );
+            $this->button_color = $this->get_option( 'button_color' );
 
             // Saves the settings
-            add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
+            add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, [$this, 'process_admin_options'] );
 
             // call webhook
-            add_action( 'woocommerce_api_brbtc_gateway', array( $this, 'webhook' ) );
+            add_action( 'woocommerce_api_'.$this->webhook, [ $this, 'webhook' ] );
+        }
+
+        function brbtc_gateway_add_admin_menu(  ) { 
+
+            add_options_page( 'Brasil Bitcoin Pay', 'Brasil Bitcoin Pay', 'manage_options', 'brasil_bitcoin_pay', 'brbtc_gateway_options_page' );
+
         }
 
         public function init_form_fields() {
-            $this->form_fields = array(
-                'enabled' => array(
+            $domain = get_site_url();
+            $webhookPath = $this->get_option( 'webhook' );
+
+            $this->form_fields = [
+                [
+                    'title' => 'Configurações',
+                    'type' => 'title',
+                    'description' => 'Configurações gerais do Gateway de pagamento.',
+                ],
+                'enabled' => [
                     'title'       => 'Ativar/Desativar',
                     'label'       => 'Ativar Gateway de Pagamento',
                     'type'        => 'checkbox',
                     'description' => '',
                     'default'     => 'yes'
+                ],
+                'merchant_id' => [
+                    'title'       => 'Merchant ID',
+                    'type'        => 'text'
+                ],
+                'webhook' => [
+                    'title' => 'Webhook',
+                    'type' => 'text',
+                    'description' => "O webhook será $domain/wc-api/$webhookPath",
+                    'default' => 'brbtc_gateway'
+                ],
+                'testmode' => array(
+                    'title'       => 'Sandbox',
+                    'label'       => 'Ativar modo sandbox',
+                    'type'        => 'checkbox',
+                    'description' => 'Utiliza o ambiente de testes do gateway de pagamento.',
+                    'default'     => 'no',
+                    'desc_tip'    => true,
                 ),
+                [
+                    'title' => 'Configurações de exibição',
+                    'type' => 'title',
+                    'description' => 'Configurações das informações textuais que são exibidas ao cliente na seleção de pagamento.',
+                ],
                 'icon' => array(
                     'title'       => 'Ícone',
                     'label'       => 'Mostrar ícone',
                     'type'        => 'checkbox',
-                    'description' => 'Escolha se quer que o logo da Brasil Bitcoin seja ou nào mostrado para o usuário.',
-                    'default'     => 'yes'
+                    'description' => 'Escolha se quer que o logo da Brasil Bitcoin Pay seja ou nào mostrado para o usuário.',
+                    'default'     => 'no',
+                    'desc_tip' => true,
                 ),
                 'title' => array(
                     'title'       => 'Título',
@@ -86,15 +136,13 @@ function brbtc_init_gateway_class(){
                     'type'        => 'textarea',
                     'description' => 'Define a descrição que irá aparecer para o usuário, nessa opção de pagamento.',
                     'default'     => 'Pague utilizando as principais criptomoedas do mercado.',
-                ),
-                'testmode' => array(
-                    'title'       => 'Sandbox',
-                    'label'       => 'Ativar modo sandbox',
-                    'type'        => 'checkbox',
-                    'description' => 'Utiliza o ambiente de testes do gateway de pagamento.',
-                    'default'     => 'no',
                     'desc_tip'    => true,
                 ),
+                [
+                    'title' => 'Configurações de pagamento',
+                    'type' => 'title',
+                    'description' => 'Configurações para definir parâmetros relacionados ao pagamento/recebimento.',
+                ],
                 'receiveType' => array(
                     'title'       => 'Preços em',
                     'description' => 'Seus preços estão em Real ou Cripto?',
@@ -113,11 +161,75 @@ function brbtc_init_gateway_class(){
                     'default'     => 'yes',
                     'desc_tip'    => true,
                 ),
-                'merchant_id' => array(
-                    'title'       => 'Merchant ID',
-                    'type'        => 'text'
-                )
-            );
+                'coin' => array(
+                    'title'       => 'Moeda',
+                    'type'        => 'select',
+                    'description' => 'Selecione a moeda que deseja disponibilizar para o cliente como forma de pagamento',
+                    'options'     => [
+                        'ANY'   => 'Todas as moedas',
+                        'BTC'   => 'Bitcoin',
+                        'BCH'   => 'Bitcoin Cash',
+                        'LTC'   => 'Litecoin',
+                        'DOGE'  => 'Dogecoin',
+                    ],
+                    'default'     => 'ANY',
+                    'desc_tip'    => true,
+                ),
+                [
+                    'title' => 'Configurações de estilo',
+                    'type' => 'title',
+                    'description' => 'Configurações de estivo e visuais do iFrame que será exibido para pagamento.',
+                ],
+                'code_size' => [
+                    'title'       => 'Tamanho do QRCode',
+                    'type'        => 'number',
+                    'description' => 'Escolha o tamanho do código QR em pixels que será exibido para o usuário.',
+                    'default'     => '140',
+                    'desc_tip'    => true,
+                ],
+                'text_color' => [
+                    'title'       => 'Cor do texto',
+                    'type'        => 'color',
+                    'description' => 'Código HEX para a cor do texto que será exibido para o usuário.',
+                    'default'     => '#6B6B6B',
+                    'desc_tip'    => true,
+                ],
+                'bg_color' => [
+                    'title'       => 'Cor de fundo',
+                    'type'        => 'color',
+                    'description' => 'Código HEX para a cor de fundo do iframe que será exibido para o usuário.',
+                    'default'     => '#F0F0F0',
+                    'desc_tip'    => true,
+                ],
+                'selector_text_color' => [
+                    'title'       => 'Text do seletor de moedas',
+                    'type'        => 'color',
+                    'description' => 'Código HEX para a cor do texto do seletor de moedas.',
+                    'default'     => '#242424',
+                    'desc_tip'    => true,
+                ],
+                'selector_color' => [
+                    'title'       => 'Fundo do seletor de moedas',
+                    'type'        => 'color',
+                    'description' => 'Código HEX para a cor de fundo do seletor de moedas.',
+                    'default'     => '#E3E3E3',
+                    'desc_tip'    => true,
+                ],
+                'button_text_color' => [
+                    'title'       => 'Cor do texto do botão',
+                    'type'        => 'color',
+                    'description' => 'Código HEX para a cor do texto do botão.',
+                    'default'     => '#FFFFFF',
+                    'desc_tip'    => true,
+                ],
+                'button_color' => [
+                    'title'       => 'Cor do botão',
+                    'type'        => 'color',
+                    'description' => 'Código HEX para a cor do botão.',
+                    'default'     => '#00b9fc',
+                    'desc_tip'    => true,
+                ],
+            ];
         }
 
         public function process_payment( $order_id ){
@@ -134,8 +246,18 @@ function brbtc_init_gateway_class(){
             $type = $this->get_option( 'receiveType' ) ?? null;
             $sandbox = $this->get_option( 'testmode' ) ? 'true' : 'false';
             $convert = $this->get_option( 'convert' ) ? '1' : '0';
+            $coin = $this->get_option( 'coin' ) ?? 'ANY';
 
-            $url = $merchant_id ? rawurlencode("/newPayment/$type/$merchant_id/$order_id/$value/BTC/$convert?sandbox=$sandbox") : false;
+            // Styles options
+            $code_size = $this->get_option( 'code_size' );
+            $text_color = str_replace('#', '', $this->get_option( 'text_color' ));
+            $bg_color = str_replace('#', '', $this->get_option( 'bg_color' ));
+            $selector_text_color = str_replace('#', '', $this->get_option( 'selector_text_color' ));
+            $selector_color = str_replace('#', '', $this->get_option( 'selector_color' ));
+            $button_text_color = str_replace('#', '', $this->get_option( 'button_text_color' ));
+            $button_color = str_replace('#', '', $this->get_option( 'button_color' ));
+
+            $url = $merchant_id ? rawurlencode("/newPayment/$type/$merchant_id/$order_id/$value/$coin/$convert?sandbox=$sandbox&codeSize=$code_size&textColor=$text_color&bgColor=$bg_color&selectorTextColor=$selector_text_color&selectorColor=$selector_color&buttonTextColor=$button_text_color&button_color=$button_color") : false;
 
             return array(
 				'result' => 'success',
@@ -143,6 +265,30 @@ function brbtc_init_gateway_class(){
 			);
         }
 
-        public function webhook(){}
+        public function webhook(){
+            if(!isset($_POST['checkout_id']) || !isset($_POST['is_paid']) || !isset($_POST['status'])) return;
+            
+            $order = wc_get_order( $_POST['checkout_id'] );
+            if(!$order) return;
+
+            $isPaid = $_POST['is_paid'];
+            $status = $_POST['status'];
+
+            if($status === 'credited' && $isPaid){
+                $value = number_format(($_POST['value_brl'] ?? 0), 2, ',', '.');
+                $cripto = number_format(($_POST['value_cripto'] ?? 0), 8, '.', '');
+                $price = number_format(($_POST['price_cripto'] ?? 0), 2, ',', '.');
+                $coin_tag = $_POST['coin_tag'] ?? '';
+
+                $order->payment_complete();
+                $order->reduce_order_stock();
+
+                $order->add_order_note("Seu pedido foi pago com sucesso!\n\nValor pago: R$ $value\nCripto: $cripto $coin_tag\nPreço unitário: R$ $price");
+            }
+            elseif($status === 'pending' && $isPaid){
+                $order->update_status('on-hold', 'Aguardando confirmação');
+                $order->add_order_note("Seu pedido está aguardando a confirmação do pagamento pela rede da criptomoeda utilizada.");
+            }
+        }
     }
 }
