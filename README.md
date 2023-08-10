@@ -1,2 +1,2 @@
 # brbtc-gateway
-Official Payment Gateway for WooCommerce
+Após a realização do cadastro, e preenchimento dos dados, você poderá acessar o iframe para pagamento após o encerramento do pedido, basta adicionar o shorcode [brbtc_gateway_iframe] na tela de finalização de compra.
