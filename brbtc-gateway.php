@@ -115,7 +115,9 @@ function brbtc_init_gateway_class(){
 
         public function payment_scripts(){}
 
-        public function validate_fields(){}
+        public function validate_fields(){
+            return true;
+        }
 
         public function process_payment( $order_id ){}
 
