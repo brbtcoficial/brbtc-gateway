@@ -16,4 +16,7 @@ Adicione o plugin ao seu WordPress.
 ## Configuração
 Configure o gateway.
 
+### Webhook
+O webhook padrão será `https://seu-site.com.br/wc-api/brbtc_gateway`, mas pdoe ser alterado para qualquer valor desejado.
+
 Após a realização do cadastro, e preenchimento dos dados, você poderá acessar o iframe para pagamento após o encerramento do pedido, basta adicionar o shorcode `[brbtc_gateway_iframe]` na tela de finalização de compra.
