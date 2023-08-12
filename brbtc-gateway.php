@@ -25,6 +25,55 @@ function get_iframe(){
     }
 }
 
+add_action( 'rest_api_init', 'register_route');
+function register_route(){
+    register_rest_route( 'brbtc_gateway', '/webhook', [
+        'methods' => 'POST',
+        'callback' => 'webhook'
+    ]);
+}
+
+function debug($txt){
+    if(is_string($txt)) {
+        $file = plugin_dir_path( __FILE__ ) . '/errors.txt'; 
+        $open = fopen( $file, "a" );
+        $write = fputs( $open, "\n".$txt ); 
+        fclose( $open );
+    }
+}
+
+function webhook($request){
+    $p = new WC_BRBTC_Gateway();
+    $secret = $p->get_option( 'secret' );
+    if($secret && $secret !== $request->get_header('x_brbtc_secret_token')) return;
+
+    $POST = json_decode($request->get_body());
+
+    $checkout_id = $POST->checkout_id ?? null;
+    $status = $POST->status ?? null;
+    if( !$checkout_id || !$status ) return;
+
+    if(strpos($checkout_id, 'sandbox_') !== false){
+        $checkout_id = intval(str_replace('sandbox_', '', $checkout_id));
+    }
+
+    $order = new WC_Order($checkout_id);
+    if(!$order) return;
+
+    if($status === 'credited'){
+        $order->payment_complete();
+        $order->reduce_order_stock();
+
+        $order->add_order_note("Seu pedido foi pago com sucesso!");
+    }
+    elseif($status === 'processing'){
+        $order->update_status('on-hold', 'Aguardando confirmação');
+        $order->add_order_note("Seu pedido está aguardando a confirmação do pagamento pela rede da criptomoeda utilizada.");
+    }
+
+    return rest_ensure_response($checkout_id);
+}
+
 add_action( 'plugins_loaded', 'brbtc_init_gateway_class' );
 function brbtc_init_gateway_class(){
     class WC_BRBTC_Gateway extends WC_Payment_Gateway {
@@ -46,37 +95,17 @@ function brbtc_init_gateway_class(){
             $this->title = $this->get_option( 'title' );
             $this->description = $this->get_option( 'description' );
             $this->enabled = $this->get_option( 'enabled' );
-            $this->icon = $this->get_option( 'icon' ) === 'yes' ? 'https://brasilbitcoin.com.br/images/logo/logo_s.png' : null;
+            $this->icon = $this->get_option( 'icon' ) === 'yes' ? plugin_dir_url( __FILE__ ) . 'images/logo.svg' : null;
             $this->testmode = 'yes' === $this->get_option( 'testmode' );
             $this->merchant_id = $this->testmode ? $this->get_option( 'test_private_key' ) : $this->get_option( 'private_key' );
             $this->receiveType = $this->get_option( 'receiveType' );
             $this->convert = $this->get_option( 'convert' );
             $this->webhook = $this->get_option( 'webhook' );
             $this->coin = $this->get_option( 'coin' );
-
-            // styles options
-            $this->code_size = $this->get_option( 'code_size' );
-            $this->text_color = $this->get_option( 'text_color' );
-            $this->bg_color = $this->get_option( 'bg_color' );
-            $this->selector_text_color = $this->get_option( 'selector_text_color' );
-            $this->selector_color = $this->get_option( 'selector_color' );
-            $this->button_text_color = $this->get_option( 'button_text_color' );
-            $this->button_color = $this->get_option( 'button_color' );
+            $this->secret = $this->get_option( 'secret' );
 
             // Saves the settings
             add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, [$this, 'process_admin_options'] );
-
-            // call webhook
-            // add_action( 'woocommerce_api_'.strtolower($this->webhook), [ $this, 'webhook' ] );
-            add_action( 'rest_api_init', [$this, 'custom_rest_api_init']);
-        }
-
-        public function custom_rest_api_init(){
-            $webhook = $this->get_option('webhook');
-            register_rest_route( strtolower($webhook), '/', [
-                'methods' => 'POST',
-                'callback' => [ $this, 'webhook' ]
-            ] );
         }
 
         public function init_form_fields() {
@@ -100,20 +129,26 @@ function brbtc_init_gateway_class(){
                     'title'       => 'Merchant ID',
                     'type'        => 'text'
                 ],
+                'secret' => [
+                    'title' => 'Secret',
+                    'type' => 'text',
+                    'description' => 'Chave secreta para autenticação do webhook',
+                    'desc_tip' => true,
+                ],
                 'webhook' => [
                     'title' => 'Webhook',
-                    'type' => 'text',
-                    'description' => "O webhook será $domain/wc-api/$webhookPath",
+                    'type' => 'title',
+                    'description' => "O webhook para atualização de pedidos é: $domain/wp-json/brbtc_gateway/webhook",
                     'default' => 'brbtc_gateway'
                 ],
-                'testmode' => [
+                'testmode' => array(
                     'title'       => 'Sandbox',
                     'label'       => 'Ativar modo sandbox',
                     'type'        => 'checkbox',
                     'description' => 'Utiliza o ambiente de testes do gateway de pagamento.',
                     'default'     => 'no',
                     'desc_tip'    => true,
-                ],
+                ),
                 [
                     'title' => 'Configurações de exibição',
                     'type' => 'title',
@@ -261,44 +296,11 @@ function brbtc_init_gateway_class(){
             $button_color = str_replace('#', '', $this->get_option( 'button_color' ));
 
             $url = $merchant_id ? rawurlencode("/newPayment/$type/$merchant_id/$order_id/$value/$coin/$convert?sandbox=$sandbox&codeSize=$code_size&textColor=$text_color&bgColor=$bg_color&selectorTextColor=$selector_text_color&selectorColor=$selector_color&buttonTextColor=$button_text_color&buttonColor=$button_color") : false;
-            
-            $woocommerce->cart->empty_cart();
 
             return array(
-				'result' => 'success',
-				'redirect' => $this->get_return_url( $order )."&brbtcUrl=$url"
-			);
-        }
-
-        public function webhook($request){
-            $data = $request->get_params();
-
-            if(!isset($data['checkout_id']) || !isset($data['is_paid']) || !isset($data['status'])) return;
-            
-            $order = wc_get_order( $data['checkout_id'] );
-            if(!$order) return;
-
-            $isPaid = $data['is_paid'];
-            $status = $data['status'];
-
-            if($status === 'credited'){
-                $value = number_format(($data['value_brl'] ?? 0), 2, ',', '.');
-                $cripto = number_format(($data['value_cripto'] ?? 0), 8, '.', '');
-                $price = number_format(($data['price_cripto'] ?? 0), 2, ',', '.');
-                $coin_tag = $data['coin_tag'] ?? '';
-
-                $order->payment_complete();
-                $order->reduce_order_stock();
-
-                $order->add_order_note("Seu pedido foi pago com sucesso!\n\nValor pago: R$ $value\nCripto: $cripto $coin_tag\nPreço unitário: R$ $price");
-            }
-            elseif($status === 'pending' && $isPaid){
-                $order->update_status('on-hold');
-                $order->add_order_note("Seu pedido está aguardando a confirmação do pagamento pela rede da criptomoeda utilizada.");
-            }
-
-            $debug = json_encode($data);
-            rest_ensure_response($debug);
+                'result' => 'success',
+                'redirect' => $this->get_return_url( $order )."&brbtcUrl=$url"
+            );
         }
     }
 }
