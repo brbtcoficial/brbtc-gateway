@@ -6,7 +6,7 @@ Este é o plugin de implementação do Gateway de Pagamentos Brasil Bitcoin Pay.
 É necessário ter uma conta na [Brasil Bitcoin](https://brasilbitcoin.com.br), com a opção Brasil Bitcoin Pay habilitada.
 
 #### IMPORTANTE
-Nós nunca entraremos em contato com você para oferecer investimentos, proessas de lucros ou qualquer coisa do gênero, nunca pediremos seu token 2FA, nem sua senha ou chave API. Você pode consultar todos os nossos canais oficiais [clicando aqui](https://brasilbitcoin.com.br/verificar-autenticidade).
+Nós nunca entraremos em contato com você para oferecer investimentos, promessas de lucros ou qualquer coisa do gênero, nunca pediremos seu token 2FA, nem sua senha ou chave API. Você pode consultar todos os nossos canais oficiais [clicando aqui](https://brasilbitcoin.com.br/verificar-autenticidade).
 
 ## Download
 Baixe o plugin [clicando aqui](https://github.com/brbtcoficial/brbtc-gateway/archive/refs/heads/main.zip).
