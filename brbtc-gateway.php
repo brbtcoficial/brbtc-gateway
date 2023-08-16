@@ -1,11 +1,11 @@
 <?php
 /**
- * Plugin Name: BRBTC Gateway for WooComerce
+ * Plugin Name: Brasil Bitcoin Pay
  * Plugin URI: https://github.com/brbtcoficial/brbtc-gateway
- * Description: Official BRBTC Gateway for WooCommerce
+ * Description: Plugin Brasil Bitcoin Pay for WooCommerce
  * Author: Brasil Bitcoin
- * Author URI: https://brasilbitcoin.com.br
- * Version: 0.0.1
+ * Author URI: https://brasilbitcoin.com.br/brasil-bitcoin-pay
+ * Version: 0.0.2
  */
 
 /**
