@@ -45,7 +45,7 @@ function debug($txt){
 function webhook($request){
     $p = new WC_BRBTC_Gateway();
     $secret = $p->get_option( 'secret' );
-    if($secret && $secret !== $request->get_header('x_brbtc_secret_token')) return;
+    if($secret !== $request->get_header('x_brbtc_secret_token')) return;
 
     $POST = json_decode($request->get_body());
 
@@ -146,7 +146,7 @@ function brbtc_init_gateway_class(){
                     'label'       => 'Ativar modo sandbox',
                     'type'        => 'checkbox',
                     'description' => 'Utiliza o ambiente de testes do gateway de pagamento.',
-                    'default'     => 'no',
+                    'default'     => 'yes',
                     'desc_tip'    => true,
                 ),
                 [
@@ -159,14 +159,14 @@ function brbtc_init_gateway_class(){
                     'label'       => 'Mostrar ícone',
                     'type'        => 'checkbox',
                     'description' => 'Escolha se quer que o logo da Brasil Bitcoin Pay seja ou nào mostrado para o usuário.',
-                    'default'     => 'no',
+                    'default'     => 'yes',
                     'desc_tip' => true,
                 ),
                 'title' => array(
                     'title'       => 'Título',
                     'type'        => 'text',
                     'description' => 'Escolha o título que irá aparecer para essa opção de pagamento.',
-                    'default'     => 'Criptomoedas',
+                    'default'     => 'Criptomoedas (Brasil Bitcoin Pay)',
                     'desc_tip'    => true,
                 ),
                 'description' => array(
