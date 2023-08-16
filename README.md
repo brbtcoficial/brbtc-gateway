@@ -39,7 +39,7 @@ Baixe o plugin [clicando aqui](https://github.com/brbtcoficial/brbtc-gateway/arc
 | Cor do texto do botão | Cor do texto do botão em hex color. | `ffffff` |
 | Cor do botão | Cor do background do botão do iframe em hex color. | `00b9fc` |
 
-#### Webhook
+## Webhook
 O webhook padrão será `https://seu-site.com.br/wp-json/brbtc_gateway/webhook`, mas pdoe ser alterado para qualquer valor desejado (feature será liberada em momento oportuno).
 
 Após a instalação e configuração, você poderá acessar o iframe para pagamento após o encerramento do pedido, basta adicionar o shortcode `[brbtc_gateway_iframe]` na tela de finalização de compra, ou onde desejar.
