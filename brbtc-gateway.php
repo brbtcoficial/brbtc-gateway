@@ -283,7 +283,7 @@ function brbtc_init_gateway_class(){
             $value = $order->get_total();
             $type = $this->get_option( 'receiveType' ) ?? null;
             $sandbox = ($this->get_option( 'testmode' ) == 'yes') ? 'true' : 'false';
-            $convert = $this->get_option( 'convert' ) ? '1' : '0';
+            $convert = ($this->get_option( 'convert' ) == 'yes') ? '1' : '0';
             $coin = $this->get_option( 'coin' ) ?? 'ANY';
 
             // Styles options
